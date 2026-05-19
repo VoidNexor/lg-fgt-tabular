@@ -1,0 +1,140 @@
+#!/usr/bin/env python
+"""Tests for `pytorch_tabular` package."""
+
+from skbase.utils.dependencies import _check_soft_dependencies
+from skbase.utils.git_diff import _is_module_changed
+import pytest
+
+from pytorch_tabular import TabularModel
+from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
+from pytorch_tabular.models import TabNetModelConfig
+
+# todo: move the logic to skip soft dependency dependent estimators to tags etc
+TABNET_AVAILABLE = _check_soft_dependencies("pytorch-tabnet", severity="none")
+
+
+@pytest.mark.skipif(
+    not _is_module_changed("pytorch_tabular.models.tabnet") or not TABNET_AVAILABLE,
+    reason="run test only if tabnet module is changed",
+)
+@pytest.mark.parametrize("multi_target", [True, False])
+@pytest.mark.parametrize(
+    "continuous_cols",
+    [
+        [
+            "AveRooms",
+            "AveBedrms",
+            "Population",
+            "AveOccup",
+            "Latitude",
+            "Longitude",
+        ],
+    ],
+)
+@pytest.mark.parametrize("categorical_cols", [["HouseAgeBin"]])
+@pytest.mark.parametrize("continuous_feature_transform", [None])
+@pytest.mark.parametrize("normalize_continuous_features", [True])
+@pytest.mark.parametrize("target_range", [True, False])
+def test_regression(
+    regression_data,
+    multi_target,
+    continuous_cols,
+    categorical_cols,
+    continuous_feature_transform,
+    normalize_continuous_features,
+    target_range,
+):
+    (train, test, target) = regression_data
+    data_config = DataConfig(
+        target=target + ["MedInc"] if multi_target else target,
+        continuous_cols=continuous_cols,
+        categorical_cols=categorical_cols,
+        continuous_feature_transform=continuous_feature_transform,
+        normalize_continuous_features=normalize_continuous_features,
+    )
+    model_config_params = {"task": "regression"}
+    if target_range:
+        _target_range = []
+        for target in data_config.target:
+            _target_range.append(
+                (
+                    float(train[target].min()),
+                    float(train[target].max()),
+                )
+            )
+        model_config_params["target_range"] = _target_range
+    model_config = TabNetModelConfig(**model_config_params)
+    trainer_config = TrainerConfig(
+        max_epochs=1,
+        checkpoints=None,
+        early_stopping=None,
+        accelerator="cpu",
+        fast_dev_run=True,
+    )
+    optimizer_config = OptimizerConfig()
+
+    tabular_model = TabularModel(
+        data_config=data_config,
+        model_config=model_config,
+        optimizer_config=optimizer_config,
+        trainer_config=trainer_config,
+    )
+    tabular_model.fit(train=train)
+
+    result = tabular_model.evaluate(test)
+    assert "test_mean_squared_error" in result[0].keys()
+    pred_df = tabular_model.predict(test)
+    assert pred_df.shape[0] == test.shape[0]
+
+
+@pytest.mark.skipif(
+    not _is_module_changed("pytorch_tabular.models.tabnet") or not TABNET_AVAILABLE,
+    reason="run test only if tabnet module is changed",
+)
+@pytest.mark.parametrize("multi_target", [False, True])
+@pytest.mark.parametrize(
+    "continuous_cols",
+    [[f"feature_{i}" for i in range(54)]],
+)
+@pytest.mark.parametrize("categorical_cols", [["feature_0_cat"]])
+@pytest.mark.parametrize("continuous_feature_transform", [None])
+@pytest.mark.parametrize("normalize_continuous_features", [True])
+def test_classification(
+    classification_data,
+    multi_target,
+    continuous_cols,
+    categorical_cols,
+    continuous_feature_transform,
+    normalize_continuous_features,
+):
+    (train, test, target) = classification_data
+    data_config = DataConfig(
+        target=target + ["feature_53"] if multi_target else target,
+        continuous_cols=continuous_cols,
+        categorical_cols=categorical_cols,
+        continuous_feature_transform=continuous_feature_transform,
+        normalize_continuous_features=normalize_continuous_features,
+    )
+    model_config_params = {"task": "classification"}
+    model_config = TabNetModelConfig(**model_config_params)
+    trainer_config = TrainerConfig(
+        max_epochs=1,
+        checkpoints=None,
+        early_stopping=None,
+        accelerator="cpu",
+        fast_dev_run=True,
+    )
+    optimizer_config = OptimizerConfig()
+
+    tabular_model = TabularModel(
+        data_config=data_config,
+        model_config=model_config,
+        optimizer_config=optimizer_config,
+        trainer_config=trainer_config,
+    )
+    tabular_model.fit(train=train)
+
+    result = tabular_model.evaluate(test)
+    assert "test_accuracy" in result[0].keys()
+    pred_df = tabular_model.predict(test)
+    assert pred_df.shape[0] == test.shape[0]
