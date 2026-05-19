@@ -4,11 +4,12 @@
 """Base Model."""
 
 import importlib
+import importlib.util
 import warnings
 from abc import ABCMeta, abstractmethod
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pytorch_lightning as pl
@@ -24,12 +25,7 @@ from pytorch_tabular.models.common.heads import blocks
 from pytorch_tabular.models.common.layers import PreEncoded1dLayer
 from pytorch_tabular.utils import get_logger, reset_all_weights
 
-try:
-    import wandb
-
-    WANDB_INSTALLED = True
-except ImportError:
-    WANDB_INSTALLED = False
+WANDB_INSTALLED = importlib.util.find_spec("wandb") is not None
 
 try:
     import plotly.graph_objects as go
@@ -40,6 +36,12 @@ except ImportError:
 
 
 logger = get_logger(__name__)
+
+
+def _get_wandb():
+    if not WANDB_INSTALLED:
+        return None
+    return importlib.import_module("wandb")
 
 
 def safe_merge_config(config: DictConfig, inferred_config: DictConfig) -> DictConfig:
@@ -647,6 +649,10 @@ class BaseModel(pl.LightningModule, metaclass=ABCMeta):
 
     def on_validation_epoch_end(self) -> None:
         if self.do_log_logits:
+            wandb = _get_wandb()
+            if wandb is None:
+                super().on_validation_epoch_end()
+                return
             logits = torch.cat(self._val_logits).detach().cpu()
             self._val_logits = []
             fig = self.create_plotly_histogram(logits, "logits")

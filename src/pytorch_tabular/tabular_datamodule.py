@@ -367,6 +367,7 @@ class TabularDatamodule(pl.LightningDataModule):
         return data
 
     def _transform_continuous_columns(self, data: DataFrame, stage: str) -> DataFrame:
+        data = self._ensure_continuous_float_dtype(data)
         if stage == "fit":
             transform = self.CONTINUOUS_TRANSFORMS[self.config.continuous_feature_transform]
             if "random_state" in transform["params"] and self.seed is not None:
@@ -382,7 +383,16 @@ class TabularDatamodule(pl.LightningDataModule):
             )
         return data
 
+    def _ensure_continuous_float_dtype(self, data: DataFrame) -> DataFrame:
+        if len(self.config.continuous_cols) == 0:
+            return data
+        float_dtypes = {col: np.float32 for col in self.config.continuous_cols}
+        return data.astype(float_dtypes, copy=False)
+
     def _normalize_continuous_columns(self, data: DataFrame, stage: str) -> DataFrame:
+        if len(self.config.continuous_cols) == 0:
+            return data
+        data = self._ensure_continuous_float_dtype(data)
         if stage == "fit":
             self.scaler = StandardScaler()
             data.loc[:, self.config.continuous_cols] = self.scaler.fit_transform(

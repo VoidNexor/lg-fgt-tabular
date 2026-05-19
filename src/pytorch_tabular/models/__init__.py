@@ -2,6 +2,7 @@ from . import (
     autoint,
     category_embedding,
     danet,
+    feature_gate_transformer,
     ft_transformer,
     gandalf,
     gate,
@@ -14,6 +15,7 @@ from .autoint import AutoIntConfig, AutoIntModel
 from .base_model import BaseModel
 from .category_embedding import CategoryEmbeddingModel, CategoryEmbeddingModelConfig
 from .danet import DANetConfig, DANetModel
+from .feature_gate_transformer import FeatureGateTransformerConfig, FeatureGateTransformerModel
 from .ft_transformer import FTTransformerConfig, FTTransformerModel
 from .gandalf import GANDALFBackbone, GANDALFConfig, GANDALFModel
 from .gate import GatedAdditiveTreeEnsembleConfig, GatedAdditiveTreeEnsembleModel
@@ -46,6 +48,8 @@ __all__ = [
     "GANDALFBackbone",
     "DANetConfig",
     "DANetModel",
+    "FeatureGateTransformerConfig",
+    "FeatureGateTransformerModel",
     "StackingModel",
     "StackingModelConfig",
     "category_embedding",
@@ -58,5 +62,6 @@ __all__ = [
     "gate",
     "gandalf",
     "danet",
+    "feature_gate_transformer",
     "stacking",
 ]

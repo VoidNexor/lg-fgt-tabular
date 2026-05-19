@@ -3,6 +3,8 @@
 # For license information, see LICENSE.TXT
 """Mixture Density Models."""
 
+import importlib
+import importlib.util
 from typing import Dict, Optional, Union
 
 import torch
@@ -21,12 +23,15 @@ from pytorch_tabular.utils import get_logger
 
 from ..base_model import BaseModel, safe_merge_config
 
-try:
-    import wandb
-except ImportError:
-    pass
+WANDB_INSTALLED = importlib.util.find_spec("wandb") is not None
 
 logger = get_logger(__name__)
+
+
+def _get_wandb():
+    if not WANDB_INSTALLED:
+        return None
+    return importlib.import_module("wandb")
 
 
 class MDNModel(BaseModel):
@@ -226,6 +231,10 @@ class MDNModel(BaseModel):
                 prog_bar=False,
             )
         if self.do_log_logits:
+            wandb = _get_wandb()
+            if wandb is None:
+                self._val_output = []
+                return
             logits = [output[0] for output in self._val_output]
             logits = torch.cat(logits).detach().cpu()
             fig = self.create_plotly_histogram(logits.unsqueeze(1), "logits")

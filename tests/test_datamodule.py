@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 """Tests for `pytorch_tabular` package."""
 
+import warnings
+
 import numpy as np
+import pandas as pd
 import pytest
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import PowerTransformer
@@ -151,3 +154,40 @@ def test_date_encoding(timeseries_data, freq):
     elif freq == "S":
         with pytest.raises(RuntimeError):
             datamodule.setup("fit")
+
+
+def test_integer_continuous_columns_do_not_raise_futurewarning():
+    frame = pd.DataFrame(
+        {
+            "x1": [1, 2, 3, 4, 5, 6],
+            "x2": [10, 20, 30, 40, 50, 60],
+            "target": [0.5, 0.8, 1.1, 1.4, 1.7, 2.0],
+        }
+    )
+    train, valid = train_test_split(frame, random_state=42)
+
+    data_config = DataConfig(
+        target=["target"],
+        continuous_cols=["x1", "x2"],
+        categorical_cols=[],
+        normalize_continuous_features=True,
+    )
+    model_config = CategoryEmbeddingModelConfig(task="regression")
+    trainer_config = TrainerConfig(max_epochs=1, checkpoints=None, early_stopping=None)
+    optimizer_config = OptimizerConfig()
+
+    tabular_model = TabularModel(
+        data_config=data_config,
+        model_config=model_config,
+        optimizer_config=optimizer_config,
+        trainer_config=trainer_config,
+    )
+    datamodule = TabularDatamodule(train=train, validation=valid, config=tabular_model.config)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        datamodule.prepare_data()
+        datamodule.setup("fit")
+
+    assert np.issubdtype(datamodule.train_dataset.data["x1"].dtype, np.floating)
+    assert np.issubdtype(datamodule.train_dataset.data["x2"].dtype, np.floating)

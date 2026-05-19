@@ -1,7 +1,7 @@
 [project]
 name = "pytorch_tabular"
 version = "1.2.0"
-description = "A standard framework for using Deep Learning for tabular data"
+description = "A research fork of PyTorch Tabular with a Local-Global Feature-Gate Transformer"
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { text = "MIT" }
 
@@ -95,7 +95,8 @@ dependencies_2024 = [
 
 
 [project.urls]
-Homepage = "https://github.com/pytorch-tabular/pytorch_tabular"
+Homepage = "https://github.com/VoidNexor/lg-fgt-tabular"
+Upstream = "https://github.com/pytorch-tabular/pytorch_tabular"
 
 
 [build-system]

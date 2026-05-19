@@ -139,6 +139,7 @@ cython_debug/
 
 #data
 data/
+data_openml/
 wandb/
 saved_models/
 output/
@@ -159,6 +160,13 @@ test.py
 lightning_logs/
 docs/tutorials/examples/basic/
 docs/tutorials/pytorch-tabular-covertype/
+benchmark_outputs/
+catboost_info/
+.pt_tmp/
+results/
+benchmarks/*_SUMMARY.md
+benchmarks/*_PLAN.md
+benchmarks/*.ps1
 
 # Pycharm
 .idea/

@@ -1,369 +1,144 @@
-![PyTorch Tabular](docs/imgs/pytorch_tabular_logo.png)
+# LG-FGT: Local-Global Feature-Gate Transformer for Tabular Prediction
 
-_PyTorch Tabular_ provides a unified interface to deep learning architectures for tabular data. It provides a high-level API and uses [PyTorch Lightning](https://pytorch-lightning.readthedocs.io/) to scale training on GPU or CPU, with automatic logging.
+This repository is a research fork of `pytorch-tabular` with an added
+Feature Gate Transformer model and a reproducible benchmark scaffold for
+small-to-medium tabular prediction.
 
-|  | **[Documentation](https://pytorch-tabular.readthedocs.io/en/latest/)** · **[Tutorials](https://pytorch-tabular.readthedocs.io/en/latest/tutorials/01-Approaching%20Any%20Tabular%20Problem%20with%20PyTorch%20Tabular/)** · **[Release Notes](https://pytorch-tabular.readthedocs.io/en/latest/history/)** |
-|---|---|
-| **Open&#160;Source** | [![MIT](https://img.shields.io/github/license/pytorch-tabular/pytorch_tabular)](https://github.com/pytorch-tabular/pytorch_tabular/blob/master/LICENSE) [![GC.OS Sponsored](https://img.shields.io/badge/GC.OS-Sponsored%20Project-orange.svg?style=flat&colorA=0eac92&colorB=2077b4)](https://gc-os-ai.github.io/) [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat-square)](https://github.com/manujosephv/pytorch_tabular/issues) |
-| **Tutorials** | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/manujosephv/pytorch_tabular/blob/main/docs/tutorials/01-Basic_Usage.ipynb) |
-| **Community** | [![!discord](https://img.shields.io/static/v1?logo=discord&label=discord&message=chat&color=lightgreen)](https://discord.com/invite/54ACzaFsn7) [![!slack](https://img.shields.io/static/v1?logo=linkedin&label=LinkedIn&message=news&color=lightblue)](https://www.linkedin.com/company/german-center-for-open-source-ai/) |
-| **CI/CD** | [![github-actions](https://img.shields.io/github/actions/workflow/status/pytorch-tabular/pytorch_tabular/releasing.yml?logo=github)](https://github.com/pytorch-tabular/pytorch_tabular/actions/workflows/releasing.yml) [![readthedocs](https://img.shields.io/readthedocs/pytorch-tabular?logo=readthedocs)](https://pytorch-tabular.readthedocs.io) |
-| **Code** | [![!pypi](https://img.shields.io/pypi/v/pytorch-tabular?color=orange)](https://pypi.org/project/pytorch-tabular/) [![!conda](https://img.shields.io/conda/vn/conda-forge/pytorch-tabular)](https://anaconda.org/conda-forge/pytorch-tabular) [![!python-versions](https://img.shields.io/pypi/pyversions/pytorch-tabular)](https://www.python.org/) [![!black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)  |
-| **Downloads** | ![PyPI - Downloads](https://img.shields.io/pypi/dw/pytorch-tabular) ![PyPI - Downloads](https://img.shields.io/pypi/dm/pytorch-tabular) [![Downloads](https://static.pepy.tech/personalized-badge/pytorch-tabular?period=total&units=international_system&left_color=grey&right_color=blue&left_text=cumulative%20(pypi))](https://pepy.tech/project/pytorch-tabular) |
-| **Citation** | [![DOI](https://zenodo.org/badge/321584367.svg)](https://zenodo.org/badge/latestdoi/321584367) |
+It is not an official release of the upstream `pytorch-tabular` project.
 
-PyTorch Tabular aims to make Deep Learning with Tabular data easy and accessible to real-world cases and research alike. The core principles behind the design of the library are:
+The project is best read as an open-source research prototype rather than as a
+claim of universal state-of-the-art performance. Tree ensembles such as
+CatBoost, LightGBM, XGBoost, ExtraTrees, and HistGradientBoosting remain strong
+reference points for many tabular tasks. LG-FGT explores whether a compact
+train-from-scratch neural model can combine local MLP features, transformer
+interactions, controlled feature gating, and diagnostic feature-importance
+signals in one practical tabular-learning pipeline.
 
-- Low Resistance Usability
-- Easy Customization
-- Scalable and Easier to Deploy
+## What Is Included
 
-It has been built on the shoulders of giants like **PyTorch**(obviously), and **PyTorch Lightning**.
+- `src/pytorch_tabular/models/feature_gate_transformer/`: LG-FGT model and
+  configuration.
+- `benchmarks/run_benchmark.py`: benchmark runner for classification and
+  regression datasets.
+- `tests/test_feature_gate_transformer.py`: smoke tests for the LG-FGT model,
+  embedding transformer compatibility, and adaptive gating controls.
 
-## Table of Contents
+## Model Idea
 
-- [Installation](#installation)
-- [Documentation](#documentation)
-- [Available Models](#available-models)
-- [Usage](#usage)
-- [Blogs](#blogs)
-- [Citation](#citation)
+LG-FGT builds a tabular representation through four parts:
+
+1. Feature tokenization for continuous and categorical inputs.
+2. Optional sample-wise feature gating for adaptive feature weighting.
+3. A local branch for flattened token features and a global branch for
+   transformer-based feature interactions.
+4. Controlled fusion with optional branch gating, raw-token shortcut, and
+   small fusion ensembles for selected settings.
+
+The implementation also exposes diagnostic importance signals from the feature
+gates and token-pooling weights. These signals are meant for model inspection,
+not as causal explanations.
 
 ## Installation
 
-Although the installation includes PyTorch, the best and recommended way is to first install PyTorch from [here](https://pytorch.org/get-started/locally/), picking up the right CUDA version for your machine.
-
-Once, you have got Pytorch installed, just use:
-
-```bash
-pip install -U “pytorch_tabular[extra]”
-```
-
-to install the complete library with extra dependencies (Weights&Biases & Plotly).
-
-And :
+Create an environment with Python 3.10 or newer, then install the repository in
+editable mode:
 
 ```bash
-pip install -U “pytorch_tabular”
+pip install -e .[extra]
 ```
 
-for the bare essentials.
-
-The sources for pytorch_tabular can be downloaded from the `Github repo`\_.
-
-You can either clone the public repository:
+Optional benchmark baselines require their own packages:
 
 ```bash
-git clone git://github.com/manujosephv/pytorch_tabular
+pip install xgboost lightgbm catboost
 ```
 
-Once you have a copy of the source, you can install it with:
-
-```bash
-cd pytorch_tabular && pip install .[extra]
-```
-
-## Documentation
-
-For complete Documentation with tutorials visit [ReadTheDocs](https://pytorch-tabular.readthedocs.io/en/latest/)
-
-## Available Models
-
-- FeedForward Network with Category Embedding is a simple FF network, but with an Embedding layers for the categorical columns.
-- [Neural Oblivious Decision Ensembles for Deep Learning on Tabular Data](https://arxiv.org/abs/1909.06312) is a model presented in ICLR 2020 and according to the authors have beaten well-tuned Gradient Boosting models on many datasets.
-- [TabNet: Attentive Interpretable Tabular Learning](https://arxiv.org/abs/1908.07442) is another model coming out of Google Research which uses Sparse Attention in multiple steps of decision making to model the output.
-- [Mixture Density Networks](https://publications.aston.ac.uk/id/eprint/373/1/NCRG_94_004.pdf) is a regression model which uses gaussian components to approximate the target function and  provide a probabilistic prediction out of the box.
-- [AutoInt: Automatic Feature Interaction Learning via Self-Attentive Neural Networks](https://arxiv.org/abs/1810.11921) is a model which tries to learn interactions between the features in an automated way and create a better representation and then use this representation in downstream task
-- [TabTransformer](https://arxiv.org/abs/2012.06678) is an adaptation of the Transformer model for Tabular Data which creates contextual representations for categorical features.
-- FT Transformer from [Revisiting Deep Learning Models for Tabular Data](https://arxiv.org/abs/2106.11959)
-- [Gated Additive Tree Ensemble](https://arxiv.org/abs/2207.08548v3) is a novel high-performance, parameter and computationally efficient deep learning architecture for tabular data. GATE uses a gating mechanism, inspired from GRU, as a feature representation learning unit with an in-built feature selection mechanism. We combine it with an ensemble of differentiable, non-linear decision trees, re-weighted with simple self-attention to predict our desired output.
-- [Gated Adaptive Network for Deep Automated Learning of Features (GANDALF)](https://arxiv.org/abs/2207.08548) is pared-down version of GATE which is more efficient and performing than GATE. GANDALF makes GFLUs the main learning unit, also introducing some speed-ups in the process. With very minimal hyperparameters to tune, this becomes an easy to use and tune model.
-- [DANETs: Deep Abstract Networks for Tabular Data Classification and Regression](https://arxiv.org/pdf/2112.02962v4.pdf) is a novel and flexible neural component for tabular data, called Abstract Layer (AbstLay), which learns to explicitly group correlative input features and generate higher-level features for semantics abstraction.  A special basic block is built using AbstLays, and we construct a family of Deep Abstract Networks (DANets) for tabular data classification and regression by stacking such blocks.
-
-**Semi-Supervised Learning**
-
-- [Denoising AutoEncoder](https://www.kaggle.com/code/springmanndaniel/1st-place-turn-your-data-into-daeta) is an autoencoder which learns robust feature representation, to compensate any noise in the dataset.
-
-## Implement Custom Models
-To implement new models, see the [How to implement new models tutorial](https://github.com/manujosephv/pytorch_tabular/blob/main/docs/tutorials/04-Implementing%20New%20Architectures.ipynb). It covers basic as well as advanced architectures.
-
-## Usage
+## Quick Usage
 
 ```python
 from pytorch_tabular import TabularModel
-from pytorch_tabular.models import CategoryEmbeddingModelConfig
-from pytorch_tabular.config import (
-    DataConfig,
-    OptimizerConfig,
-    TrainerConfig,
-    ExperimentConfig,
-)
+from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
+from pytorch_tabular.models import FeatureGateTransformerConfig
 
 data_config = DataConfig(
-    target=[
-        "target"
-    ],  # target should always be a list.
-    continuous_cols=num_col_names,
-    categorical_cols=cat_col_names,
+    target=["target"],
+    continuous_cols=continuous_cols,
+    categorical_cols=categorical_cols,
+    normalize_continuous_features=True,
 )
-trainer_config = TrainerConfig(
-    auto_lr_find=True,  # Runs the LRFinder to automatically derive a learning rate
-    batch_size=1024,
-    max_epochs=100,
+
+model_config = FeatureGateTransformerConfig(
+    task="classification",
+    input_embed_dim=32,
+    num_heads=4,
+    num_attn_blocks=2,
+    use_feature_gating=True,
+    use_local_branch=True,
+    use_global_branch=True,
 )
+
+trainer_config = TrainerConfig(max_epochs=30, batch_size=1024)
 optimizer_config = OptimizerConfig()
 
-model_config = CategoryEmbeddingModelConfig(
-    task="classification",
-    layers="1024-512-512",  # Number of nodes in each layer
-    activation="LeakyReLU",  # Activation between each layers
-    learning_rate=1e-3,
-)
-
-tabular_model = TabularModel(
+model = TabularModel(
     data_config=data_config,
     model_config=model_config,
-    optimizer_config=optimizer_config,
     trainer_config=trainer_config,
+    optimizer_config=optimizer_config,
 )
-tabular_model.fit(train=train, validation=val)
-result = tabular_model.evaluate(test)
-pred_df = tabular_model.predict(test)
-tabular_model.save_model("examples/basic")
-loaded_model = TabularModel.load_model("examples/basic")
+model.fit(train=train_df, validation=valid_df)
+metrics = model.evaluate(test_df)
+predictions = model.predict(test_df)
 ```
 
-## Blogs
+## Benchmark Examples
 
-- [PyTorch Tabular – A Framework for Deep Learning for Tabular Data](https://deep-and-shallow.com/2021/01/27/pytorch-tabular-a-framework-for-deep-learning-for-tabular-data/)
-- [Neural Oblivious Decision Ensembles(NODE) – A State-of-the-Art Deep Learning Algorithm for Tabular Data](https://deep-and-shallow.com/2021/02/25/neural-oblivious-decision-ensemblesnode-a-state-of-the-art-deep-learning-algorithm-for-tabular-data/)
-- [Mixture Density Networks: Probabilistic Regression for Uncertainty Estimation](https://deep-and-shallow.com/2021/03/20/mixture-density-networks-probabilistic-regression-for-uncertainty-estimation/)
+Run a fast smoke test:
 
-## Future Roadmap(Contributions are Welcome)
+```powershell
+python benchmarks/run_benchmark.py --dataset synthetic_classification --models logistic_regression feature_gate_transformer_adaptive --sample-size 1000 --max-epochs 3 --accelerator cpu
+```
 
-1. Integrate Optuna Hyperparameter Tuning
-1. Migrate Datamodule to Polars or NVTabular for faster data loading and to handle larger than RAM datasets.
-1. Add GaussRank as Feature Transformation
-1. Have a scikit-learn compatible API
-1. Enable support for multi-label classification
-1. Keep adding more architectures
+Run a single real dataset:
 
-## Contributors
+```powershell
+python benchmarks/run_benchmark.py --dataset adult_income --models logistic_regression random_forest ft_transformer feature_gate_transformer_adaptive --sample-size 50000 --max-epochs 30 --accelerator gpu --seeds 42 43 44
+```
 
-<!-- readme: contributors -start -->
-<table>
-	<tbody>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/manujosephv">
-                    <img src="https://avatars.githubusercontent.com/u/10508493?v=4" width="100;" alt="manujosephv"/>
-                    <br />
-                    <sub><b>Manu Joseph</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/Borda">
-                    <img src="https://avatars.githubusercontent.com/u/6035284?v=4" width="100;" alt="Borda"/>
-                    <br />
-                    <sub><b>Jirka Borovec</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/wsad1">
-                    <img src="https://avatars.githubusercontent.com/u/13963626?v=4" width="100;" alt="wsad1"/>
-                    <br />
-                    <sub><b>Jinu Sunil</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/ProgramadorArtificial">
-                    <img src="https://avatars.githubusercontent.com/u/130674366?v=4" width="100;" alt="ProgramadorArtificial"/>
-                    <br />
-                    <sub><b>Programador Artificial</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/sorenmacbeth">
-                    <img src="https://avatars.githubusercontent.com/u/130043?v=4" width="100;" alt="sorenmacbeth"/>
-                    <br />
-                    <sub><b>Soren Macbeth</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/ArozHada">
-                    <img src="https://avatars.githubusercontent.com/u/19288227?v=4" width="100;" alt="ArozHada"/>
-                    <br />
-                    <sub><b>Aroj Hada</b></sub>
-                </a>
-            </td>
-		</tr>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/fonnesbeck">
-                    <img src="https://avatars.githubusercontent.com/u/81476?v=4" width="100;" alt="fonnesbeck"/>
-                    <br />
-                    <sub><b>Chris Fonnesbeck</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/snehilchatterjee">
-                    <img src="https://avatars.githubusercontent.com/u/127598707?v=4" width="100;" alt="snehilchatterjee"/>
-                    <br />
-                    <sub><b>Snehil Chatterjee</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/jxtrbtk">
-                    <img src="https://avatars.githubusercontent.com/u/40494970?v=4" width="100;" alt="jxtrbtk"/>
-                    <br />
-                    <sub><b>Null</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/abhisharsinha">
-                    <img src="https://avatars.githubusercontent.com/u/24841841?v=4" width="100;" alt="abhisharsinha"/>
-                    <br />
-                    <sub><b>Abhishar Sinha</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/ndrsfel">
-                    <img src="https://avatars.githubusercontent.com/u/21068727?v=4" width="100;" alt="ndrsfel"/>
-                    <br />
-                    <sub><b>Andreas</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/charitarthchugh">
-                    <img src="https://avatars.githubusercontent.com/u/37895518?v=4" width="100;" alt="charitarthchugh"/>
-                    <br />
-                    <sub><b>Charitarth Chugh</b></sub>
-                </a>
-            </td>
-		</tr>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/EeyoreLee">
-                    <img src="https://avatars.githubusercontent.com/u/49790022?v=4" width="100;" alt="EeyoreLee"/>
-                    <br />
-                    <sub><b>Earlee</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/JulianRein">
-                    <img src="https://avatars.githubusercontent.com/u/35046938?v=4" width="100;" alt="JulianRein"/>
-                    <br />
-                    <sub><b>Null</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/krshrimali">
-                    <img src="https://avatars.githubusercontent.com/u/19997320?v=4" width="100;" alt="krshrimali"/>
-                    <br />
-                    <sub><b>Kushashwa Ravi Shrimali</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/Actis92">
-                    <img src="https://avatars.githubusercontent.com/u/46601193?v=4" width="100;" alt="Actis92"/>
-                    <br />
-                    <sub><b>Luca Actis Grosso</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/sgbaird">
-                    <img src="https://avatars.githubusercontent.com/u/45469701?v=4" width="100;" alt="sgbaird"/>
-                    <br />
-                    <sub><b>Sterling G. Baird</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/furyhawk">
-                    <img src="https://avatars.githubusercontent.com/u/831682?v=4" width="100;" alt="furyhawk"/>
-                    <br />
-                    <sub><b>Teck Meng</b></sub>
-                </a>
-            </td>
-		</tr>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/yinyunie">
-                    <img src="https://avatars.githubusercontent.com/u/25686434?v=4" width="100;" alt="yinyunie"/>
-                    <br />
-                    <sub><b>Yinyu Nie</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/YonyBresler">
-                    <img src="https://avatars.githubusercontent.com/u/24940683?v=4" width="100;" alt="YonyBresler"/>
-                    <br />
-                    <sub><b>YonyBresler</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/HernandoR">
-                    <img src="https://avatars.githubusercontent.com/u/45709656?v=4" width="100;" alt="HernandoR"/>
-                    <br />
-                    <sub><b>Liu Zhen</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/enifeder">
-                    <img src="https://avatars.githubusercontent.com/u/65483484?v=4" width="100;" alt="enifeder"/>
-                    <br />
-                    <sub><b>enifeder</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/taimo3810">
-                    <img src="https://avatars.githubusercontent.com/u/132860814?v=4" width="100;" alt="taimo3810"/>
-                    <br />
-                    <sub><b>taimo</b></sub>
-                </a>
-            </td>
-		</tr>
-	<tbody>
-</table>
-<!-- readme: contributors -end -->
+Raw experiment outputs are intentionally ignored by Git. Keep large logs,
+checkpoints, downloaded datasets, and local result folders outside the public
+repository unless you deliberately prepare a release artifact.
+
+## Tests
+
+```bash
+pytest tests/test_feature_gate_transformer.py
+```
+
+The original `pytorch-tabular` test suite is still present, but this fork's
+main added tests are the LG-FGT tests above.
+
+## Project Status
+
+This is a research-engineering project. The current evidence supports a
+conservative interpretation:
+
+- LG-FGT is useful as a compact deep tabular baseline with local-global feature
+  fusion and inspectable gating signals.
+- It can be competitive among common deep tabular baselines on selected
+  small-to-medium datasets.
+- It should not be advertised as universally stronger than tree ensembles,
+  TabPFN-style foundation models, or recent large-scale tabular systems.
+
+## Project Origin
+
+This repository builds on the open-source `pytorch-tabular` project and keeps
+the original MIT license. The LG-FGT model and benchmark scaffold were added in
+this fork for academic experimentation.
 
 ## Citation
 
-If you use PyTorch Tabular for a scientific publication, we would appreciate citations to the published software and the following paper:
-
-- [arxiv Paper](https://arxiv.org/abs/2104.13638)
-
-```
-@misc{joseph2021pytorch,
-      title={PyTorch Tabular: A Framework for Deep Learning with Tabular Data},
-      author={Manu Joseph},
-      year={2021},
-      eprint={2104.13638},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
-}
-```
-
-- Zenodo Software Citation
-
-```
-@software{manu_joseph_2023_7554473,
-  author       = {Manu Joseph and
-                  Jinu Sunil and
-                  Jiri Borovec and
-                  Chris Fonnesbeck and
-                  jxtrbtk and
-                  Andreas and
-                  JulianRein and
-                  Kushashwa Ravi Shrimali and
-                  Luca Actis Grosso and
-                  Sterling G. Baird and
-                  Yinyu Nie},
-  title        = {manujosephv/pytorch\_tabular: v1.0.1},
-  month        = jan,
-  year         = 2023,
-  publisher    = {Zenodo},
-  version      = {v1.0.1},
-  doi          = {10.5281/zenodo.7554473},
-  url          = {https://doi.org/10.5281/zenodo.7554473}
-}
-```
+This fork does not currently provide a formal academic citation. If you use the
+base library, cite the upstream `pytorch-tabular` project as appropriate. If you
+use LG-FGT from this repository, cite the repository URL and release version
+once a public release is created.
